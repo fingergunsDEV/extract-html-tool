@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML Link Extractor and Editor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center min-h-screen p-4">
+  <div class="w-full max-w-4xl bg-white rounded-lg shadow-lg p-6">
+    <h1 class="text-2xl font-bold mb-4 text-center">HTML Link Extractor and Editor</h1>
+
+    <!-- Input Section -->
+    <div class="mb-4">
+      <label for="htmlInput" class="block text-sm font-medium text-gray-700">Paste HTML or Enter URL</label>
+      <textarea id="htmlInput" rows="6" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Paste HTML here..."></textarea>
+      <input id="urlInput" type="text" class="w-full mt-2 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Or enter a URL to fetch HTML (e.g., https://example.com)">
+      <div class="flex space-x-2 mt-2">
+        <button onclick="extractLinks()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Extract Links</button>
+        <button onclick="fetchHTML()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">Fetch from URL</button>
+      </div>
+      <!-- Error Message Area -->
+      <div id="errorMessage" class="mt-2 text-red-600 hidden"></div>
+    </div>
+
+    <!-- Links List -->
+    <div id="linksContainer" class="mb-4 hidden">
+      <h2 class="text-lg font-semibold mb-2">Extracted Links</h2>
+      <ul id="linksList" class="space-y-2"></ul>
+    </div>
+
+    <!-- Modified HTML Output -->
+    <div id="outputContainer" class="mb-4 hidden">
+      <h2 class="text-lg font-semibold mb-2">Modified HTML</h2>
+      <textarea id="modifiedHTML" rows="6" class="w-full p-2 border rounded-md bg-gray-50" readonly></textarea>
+    </div>
+  </div>
+
+  <!-- Modal for Editing Links -->
+  <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
+      <h3 class="text-lg font-semibold mb-4">Edit Link</h3>
+      <label for="newLink" class="block text-sm font-medium text-gray-700">New URL</label>
+      <input id="newLink" type="text" class="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <div class="flex justify-end space-x-2">
+        <button onclick="cancelEdit()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400">Cancel</button>
+        <button onclick="saveLink()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let originalHTML = '';
+    let links = [];
+    let currentEditIndex = null;
+
+    // Display error message
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.classList.remove('hidden');
+      setTimeout(() => errorDiv.classList.add('hidden'), 10000); // Hide after 10s
+    }
+
+    // Extract links from HTML input
+    function extractLinks() {
+      const htmlInput = document.getElementById('htmlInput').value;
+      if (!htmlInput) {
+        showError('Please enter HTML content.');
+        return;
+      }
+
+      originalHTML = htmlInput;
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlInput, 'text/html');
+      const anchorTags = doc.querySelectorAll('a[href]');
+      links = Array.from(anchorTags).map((a, index) => ({
+        index,
+        href: a.getAttribute('href'),
+        text: a.textContent.trim() || a.getAttribute('href')
+      }));
+
+      displayLinks();
+      updateModifiedHTML();
+    }
+
+    // Fetch HTML from URL
+    async function fetchHTML() {
+      const url = document.getElementById('urlInput').value.trim();
+      if (!url) {
+        showError('Please enter a valid URL (e.g., https://example.com).');
+        return;
+      }
+
+      // Validate URL format
+      if (!/^https?:\/\//.test(url)) {
+        showError('URL must start with http:// or https://.');
+        return;
+      }
+
+      try {
+        // Use a CORS proxy for testing (replace with your own in production)
+        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+        const response = await fetch(proxyUrl + url, {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const html = await response.text();
+        document.getElementById('htmlInput').value = html;
+        extractLinks();
+      } catch (error) {
+        let errorMessage = 'Error fetching HTML: ' + error.message;
+        if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+          errorMessage = 'Unable to fetch HTML due to CORS restrictions. Try pasting the HTML directly or contact the website owner to enable CORS. Alternatively, use a server-side proxy.';
+        }
+        showError(errorMessage);
+        console.error('Fetch error:', error);
+      }
+    }
+
+    // Display extracted links
+    function displayLinks() {
+      const linksList = document.getElementById('linksList');
+      const linksContainer = document.getElementById('linksContainer');
+      linksList.innerHTML = '';
+
+      if (links.length === 0) {
+        linksList.innerHTML = '<li class="text-gray-500">No links found.</li>';
+      } else {
+        links.forEach(link => {
+          const li = document.createElement('li');
+          li.className = 'flex justify-between items-center p-2 bg-gray-50 rounded-md';
+          li.innerHTML = `
+            <span class="text-blue-600 truncate max-w-xs" title="${link.href}">${link.text}</span>
+            <button onclick="openEditModal(${link.index})" class="bg-blue-500 text-white px-2 py-1 rounded-md hover:bg-blue-600">Edit</button>
+          `;
+          linksList.appendChild(li);
+        });
+      }
+
+      linksContainer.classList.remove('hidden');
+    }
+
+    // Open modal for editing link
+    function openEditModal(index) {
+      currentEditIndex = index;
+      const newLinkInput = document.getElementById('newLink');
+      newLinkInput.value = links[index].href;
+      document.getElementById('editModal').classList.remove('hidden');
+      newLinkInput.focus();
+    }
+
+    // Cancel edit
+    function cancelEdit() {
+      document.getElementById('editModal').classList.add('hidden');
+      currentEditIndex = null;
+    }
+
+    // Save new link
+    function saveLink() {
+      const newLink = document.getElementById('newLink').value.trim();
+      if (!newLink) {
+        alert('Please enter a valid URL.');
+        return;
+      }
+
+      links[currentEditIndex].href = newLink;
+      document.getElementById('editModal').classList.add('hidden');
+      displayLinks();
+      updateModifiedHTML();
+      currentEditIndex = null;
+    }
+
+    // Update modified HTML
+    function updateModifiedHTML() {
+      let modifiedHTML = originalHTML;
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(originalHTML, 'text/html');
+      const anchorTags = doc.querySelectorAll('a[href]');
+
+      links.forEach((link, index) => {
+        if (anchorTags[index]) {
+          anchorTags[index].setAttribute('href', link.href);
+        }
+      });
+
+      modifiedHTML = doc.documentElement.outerHTML;
+      const output = document.getElementById('modifiedHTML');
+      output.value = modifiedHTML;
+      document.getElementById('outputContainer').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
