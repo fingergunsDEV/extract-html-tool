@@ -3,21 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HTML Link Extractor and Editor</title>
+  <title>Free Link Extractor Tool for SEO – Holistic Growth Marketing</title>
+  <meta name="description" content="Extract and edit links in HTML with our free SEO tool. Optimize your website’s links for better rankings and engagement.">
+  <meta name="keywords" content="SEO tools, link extractor, HTML link editor, business tools, Holistic Growth Marketing">
+  <meta name="author" content="Holistic Growth Marketing">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Link Extractor Tool",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "url": "https://www.holisticgrowthmarketing.com/tools/link-extractor",
+    "provider": {
+      "@type": "Organization",
+      "name": "Holistic Growth Marketing",
+      "url": "https://www.holisticgrowthmarketing.com/"
+    }
+  }
+  </script>
 </head>
 <body class="bg-gray-100 flex flex-col items-center min-h-screen p-4">
   <div class="w-full max-w-4xl bg-white rounded-lg shadow-lg p-6">
-    <h1 class="text-2xl font-bold mb-4 text-center">HTML Link Extractor and Editor</h1>
+    <h1 class="text-2xl font-bold mb-4 text-center">Free Link Extractor & Editor Tool</h1>
+    <p class="text-gray-600 mb-4 text-center">Paste your HTML below to extract and edit links. Optimize your website’s links for SEO with this free tool from <a href="https://www.holisticgrowthmarketing.com/" class="text-blue-600 hover:underline">Holistic Growth Marketing</a>.</p>
 
     <!-- Input Section -->
     <div class="mb-4">
-      <label for="htmlInput" class="block text-sm font-medium text-gray-700">Paste HTML or Enter URL</label>
-      <textarea id="htmlInput" rows="6" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Paste HTML here..."></textarea>
-      <input id="urlInput" type="text" class="w-full mt-2 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Or enter a URL to fetch HTML (e.g., https://example.com)">
-      <div class="flex space-x-2 mt-2">
+      <label for="htmlInput" class="block text-sm font-medium text-gray-700">Paste HTML</label>
+      <textarea id="htmlInput" rows="6" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Paste HTML here (e.g., <a href='https://example.com'>Example</a>)"></textarea>
+      <div class="mt-2">
         <button onclick="extractLinks()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Extract Links</button>
-        <button onclick="fetchHTML()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">Fetch from URL</button>
       </div>
       <!-- Error Message Area -->
       <div id="errorMessage" class="mt-2 text-red-600 hidden"></div>
@@ -33,6 +50,7 @@
     <div id="outputContainer" class="mb-4 hidden">
       <h2 class="text-lg font-semibold mb-2">Modified HTML</h2>
       <textarea id="modifiedHTML" rows="6" class="w-full p-2 border rounded-md bg-gray-50" readonly></textarea>
+      <button onclick="downloadHTML()" class="mt-2 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">Download Modified HTML</button>
     </div>
   </div>
 
@@ -41,7 +59,7 @@
     <div class="bg-white rounded-lg p-6 w-full max-w-md">
       <h3 class="text-lg font-semibold mb-4">Edit Link</h3>
       <label for="newLink" class="block text-sm font-medium text-gray-700">New URL</label>
-      <input id="newLink" type="text" class="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <input id="newLink" type="text" class="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter new URL (e.g., https://new-site.com)">
       <div class="flex justify-end space-x-2">
         <button onclick="cancelEdit()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400">Cancel</button>
         <button onclick="saveLink()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Save</button>
@@ -59,20 +77,26 @@
       const errorDiv = document.getElementById('errorMessage');
       errorDiv.textContent = message;
       errorDiv.classList.remove('hidden');
-      setTimeout(() => errorDiv.classList.add('hidden'), 10000); // Hide after 10s
+      setTimeout(() => errorDiv.classList.add('hidden'), 5000); // Hide after 5s
     }
 
     // Extract links from HTML input
     function extractLinks() {
-      const htmlInput = document.getElementById('htmlInput').value;
+      const htmlInput = document.getElementById('htmlInput').value.trim();
       if (!htmlInput) {
-        showError('Please enter HTML content.');
+        showError('Please paste HTML content.');
+        return;
+      }
+
+      // Validate HTML
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlInput, 'text/html');
+      if (doc.querySelector('parsererror')) {
+        showError('Invalid HTML. Please check your input and try again.');
         return;
       }
 
       originalHTML = htmlInput;
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlInput, 'text/html');
       const anchorTags = doc.querySelectorAll('a[href]');
       links = Array.from(anchorTags).map((a, index) => ({
         index,
@@ -82,46 +106,6 @@
 
       displayLinks();
       updateModifiedHTML();
-    }
-
-    // Fetch HTML from URL
-    async function fetchHTML() {
-      const url = document.getElementById('urlInput').value.trim();
-      if (!url) {
-        showError('Please enter a valid URL (e.g., https://example.com).');
-        return;
-      }
-
-      // Validate URL format
-      if (!/^https?:\/\//.test(url)) {
-        showError('URL must start with http:// or https://.');
-        return;
-      }
-
-      try {
-        // Use a CORS proxy for testing (replace with your own in production)
-        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-        const response = await fetch(proxyUrl + url, {
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const html = await response.text();
-        document.getElementById('htmlInput').value = html;
-        extractLinks();
-      } catch (error) {
-        let errorMessage = 'Error fetching HTML: ' + error.message;
-        if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
-          errorMessage = 'Unable to fetch HTML due to CORS restrictions. Try pasting the HTML directly or contact the website owner to enable CORS. Alternatively, use a server-side proxy.';
-        }
-        showError(errorMessage);
-        console.error('Fetch error:', error);
-      }
     }
 
     // Display extracted links
@@ -170,6 +154,12 @@
         return;
       }
 
+      // Basic URL validation
+      if (!/^https?:\/\//.test(newLink)) {
+        alert('URL must start with http:// or https://.');
+        return;
+      }
+
       links[currentEditIndex].href = newLink;
       document.getElementById('editModal').classList.add('hidden');
       displayLinks();
@@ -194,6 +184,18 @@
       const output = document.getElementById('modifiedHTML');
       output.value = modifiedHTML;
       document.getElementById('outputContainer').classList.remove('hidden');
+    }
+
+    // Download modified HTML
+    function downloadHTML() {
+      const html = document.getElementById('modifiedHTML').value;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'modified.html';
+      a.click();
+      URL.revokeObjectURL(url);
     }
   </script>
 </body>
